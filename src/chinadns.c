@@ -76,7 +76,7 @@ static int compression = 0;
 static int bidirectional = 0;
 
 static const char *default_dns_servers =
-"114.114.114.114,223.5.5.5,8.8.8.8,8.8.4.4,208.67.222.222:443,208.67.222.222:5353";
+"114.114.114.114,223.5.5.5,[2001:470:0:9d::2]";
 static char *dns_servers = NULL;
 static int dns_servers_len;
 static int has_chn_dns;
@@ -299,6 +299,7 @@ static int resolve_dns_servers() {
   struct addrinfo hints;
   struct addrinfo *addr_ip;
   char* token;
+  char* ipv6_type;
   int r;
   int i = 0;
   char *pch = strchr(dns_servers, ',');
@@ -318,14 +319,24 @@ static int resolve_dns_servers() {
   dns_server_addrs = calloc(dns_servers_len, sizeof(id_addr_t));
 
   memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_INET;
+  hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
   token = strtok(dns_servers, ",");
   while (token) {
     char *port;
     memset(global_buf, 0, BUF_SIZE);
+    if (*token == '[') {
+      token++;  /* Skip '[' for ipv6 address. */
+    }
     strncpy(global_buf, token, BUF_SIZE - 1);
     port = (strrchr(global_buf, ':'));
+    ipv6_type = strchr(global_buf, ']');
+    if (ipv6_type) {
+      *ipv6_type = 0;
+      if (ipv6_type > port) {
+        port = 0;
+      }
+    }
     if (port) {
       *port = '\0';
       port++;
@@ -337,8 +348,7 @@ static int resolve_dns_servers() {
       return -1;
     }
     if (compression) {
-      if (test_ip_in_list(((struct sockaddr_in *)addr_ip->ai_addr)->sin_addr,
-                          &chnroute_list)) {
+      if (((struct sockaddr_in *)addr_ip->ai_addr)->sin_family == AF_INET) {
         dns_server_addrs[has_chn_dns].addr = addr_ip->ai_addr;
         dns_server_addrs[has_chn_dns].addrlen = addr_ip->ai_addrlen;
         has_chn_dns++;
@@ -354,8 +364,7 @@ static int resolve_dns_servers() {
       i++;
       token = strtok(0, ",");
       if (chnroute_file) {
-        if (test_ip_in_list(((struct sockaddr_in *)addr_ip->ai_addr)->sin_addr,
-                            &chnroute_list)) {
+        if (((struct sockaddr_in *)addr_ip->ai_addr)->sin_family == AF_INET) {
           has_chn_dns = 1;
         } else {
           has_foreign_dns = 1;
@@ -556,7 +565,7 @@ static int dns_init_sockets() {
     return -1;
   }
   freeaddrinfo(addr_ip);
-  remote_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  remote_sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
   if (0 != setnonblock(remote_sock))
     return -1;
   return 0;
@@ -905,7 +914,7 @@ Forward DNS requests.\n\
   -b BIND_ADDR          address that listens, default: 0.0.0.0\n\
   -p BIND_PORT          port that listens, default: 53\n\
   -s DNS                DNS servers to use, default:\n\
-                        114.114.114.114,208.67.222.222:443,8.8.8.8\n\
+                        114.114.114.114,223.5.5.5,[2001:470:0:9d::2]\n\
   -m                    use DNS compression pointer mutation\n\
                         (backlist and delaying would be disabled)\n\
   -v                    verbose logging\n\
