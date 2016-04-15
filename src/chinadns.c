@@ -76,7 +76,7 @@ static int compression = 0;
 static int bidirectional = 0;
 
 static const char *default_dns_servers =
-"114.114.114.114,223.5.5.5,[2001:470:0:9d::2]";
+"114.114.114.114,223.5.5.5,[2001:4860:4860::8888]";
 static char *dns_servers = NULL;
 static int dns_servers_len;
 static int has_chn_dns;
@@ -914,7 +914,7 @@ Forward DNS requests.\n\
   -b BIND_ADDR          address that listens, default: 0.0.0.0\n\
   -p BIND_PORT          port that listens, default: 53\n\
   -s DNS                DNS servers to use, default:\n\
-                        114.114.114.114,223.5.5.5,[2001:470:0:9d::2]\n\
+                        114.114.114.114,223.5.5.5,[2001:4860:4860::8888]\n\
   -m                    use DNS compression pointer mutation\n\
                         (backlist and delaying would be disabled)\n\
   -v                    verbose logging\n\
